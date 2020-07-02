@@ -16,6 +16,7 @@ import pandas as pd
 from covid import Covid
 import json
 from countryinfo import CountryInfo
+import seaborn as sns
 
 covid = Covid()
 covid.get_data()
@@ -87,7 +88,7 @@ ratio = {}
 for key in data_cases:
     for key1 in data_population:
         if key == key1:
-            ratio[key] = (data_cases[key1]/ data_population[key])*100
+            ratio[key] = round((data_cases[key1]/ data_population[key])*100,3)
 
 
 
@@ -105,6 +106,7 @@ df.to_csv(r'/home/edyta/corona/korona.csv')
 korona = os.path.join('/home/edyta/corona/', 'korona.csv')
 korona = pd.read_csv(korona)
 
+list1 = list(korona_ratio['Ratio'])
 
 #Folium map
 #europe = os.path.join('/home/edyta/corona/','europe.geojson')
@@ -112,9 +114,29 @@ m = folium.Map(location=[55, 10], zoom_start=4,  tiles='cartodbdark_matter')
 #geojson_layer = folium.GeoJson(europe,name='geojson', show=False).add_to(m)
 
 for item in geo['features']:
-    for rat in korona_ratio['Ratio']:
-        item['properties']['ratio'] = rat
+    for rat in list1:
+        item['properties']['Ratio'] = rat
+        list1.remove(rat)
+        break
 
+
+
+
+##Define color - seaborn library 
+col1 = sns.palplot(sns.color_palette("GnBu_d"))
+col2 = sns.palplot(sns.light_palette((210, 90, 60), input="husl"))
+
+#Create map
+m.choropleth(
+ geo_data=geo,
+ name='Corona_ratio',
+ data=korona_ratio,
+ columns=['Country', 'Ratio'],
+  key_on='properties.NAME',
+ fill_color=col2, fill_opacity=0.4, line_opacity=0.9,
+  threshold_scale=[0, 1,2, 620],
+  show = False
+)
 
 m.choropleth(
  geo_data=geo,
@@ -122,22 +144,14 @@ m.choropleth(
  data=korona,
  columns=['Country', 'Cases'],
   key_on='properties.NAME',
- fill_color= 'Reds', fill_opacity=0.4, line_opacity=0.9, 
+ fill_color= col1, fill_opacity=0.4, line_opacity=0.9, 
  threshold_scale=[50, 1000, 3000, 5000,15000, 50000,60000, 70000, 1000000]
 )
 
 
 
-m.choropleth(
- geo_data=geo,
- name='Corona_ratio',
- data=korona_ratio,
- columns=['Country', 'Ratio'],
-  key_on='properties.NAME',
- fill_color='Reds', fill_opacity=0.4, line_opacity=0.9,
-  threshold_scale=[0, 1,2, 620],
-  show = False
-)
+
+
 style_function = lambda x: {'fillColor': '#ffffff', 
                             'color':'#000000', 
                             'fillOpacity': 0.1, 
@@ -151,7 +165,7 @@ NIL=folium.features.GeoJson(
         style_function=style_function,
         control=False,
         highlight_function=highlight_function,
-        tooltip=folium.features.GeoJsonTooltip(fields=['NAME', 'ratio'],
+        tooltip=folium.features.GeoJsonTooltip(fields=['NAME', 'Ratio'],
             aliases=['Name', 'R: '],
             style=("background-color: white; color: #333333; font-family: arial; font-size: 12px; padding: 10px;"),
             sticky=True
